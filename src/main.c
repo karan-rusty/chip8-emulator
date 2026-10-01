@@ -1,24 +1,33 @@
-#include "chip8.h"
+#define _POSIX_C_SOURCE 200809L
 
+#include "chip8.h"
+#include "terminal.h"
+
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <time.h>
+
+/* Timers run at 60Hz on real hardware, and that is the clock the whole
+ * frontend is paced by. The CPU is then given a slice of work per tick. */
+#define TIMER_HZ         60
+#define CYCLES_PER_FRAME 10   /* 10 * 60 = 600 instructions per second */
 
 /* A hand-assembled ROM used when no file is given.
  *
  *   0x200: 60 10   V0 = 0x10   (x = 16)
  *   0x202: 61 08   V1 = 0x08   (y = 8)
- *   0x204: F0 20   I  = 0x020  (the glyph in font memory)
- *                    (must be x=0; FB 20 is FxB0, the flag pointer)
- *   0x206: D0 14   draw 4 rows at V0,V1 from mem[I]
- *                    (four hex digits: D x y N, so x=0 -> V0, y=1 -> V1)
- *   0x208: 00 00   noop
+ *   0x204: A0 00   I  = 0x000   the glyph '0', which lives at FONT_BASE
+ *   0x206: D0 15   draw 5 rows at V0,V1 from mem[I]
+ *                    four hex digits: D x y N, so x=0 -> V0, y=1 -> V1, N=5
+ *   0x208: 00 00   inert; advances pc
  *
- * Expect a hollow 4x4 square with the top-left pixel missing, at x=16..19,
- * y=8..11.
- */
+ * Expect the glyph '0': a 4-wide, 5-tall ring at x=16..19, y=8..12, with 14
+ * pixels lit. This ROM used to load I with F020, which is not an instruction
+ * on any CHIP-8 - it read four bytes out of the middle of glyph '6'. */
 static const uint8_t test_rom[] = {
-    0x60, 0x10, 0x61, 0x08, 0xF0, 0x20, 0xD0, 0x14, 0x00, 0x00,
+    0x60, 0x10, 0x61, 0x08, 0xA0, 0x00, 0xD0, 0x15, 0x00, 0x00,
 };
 
 static int load_file(Chip8 *c, const char *path)
@@ -79,6 +88,71 @@ static void print_screen(const Chip8 *c)
     }
 }
 
+/* Advance a deadline by one frame. */
+static void add_frame(struct timespec *t)
+{
+    t->tv_nsec += 1000000000L / TIMER_HZ;
+    if (t->tv_nsec >= 1000000000L) {
+        t->tv_nsec -= 1000000000L;
+        t->tv_sec++;
+    }
+}
+
+/* Sleep until `deadline`, or return at once if it has already passed.
+ * Sleeping to an absolute deadline rather than for a frame's worth keeps the
+ * timing free of the work time, which would otherwise accumulate. */
+static void sleep_until(struct timespec *deadline)
+{
+    struct timespec now, req;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    if (now.tv_sec > deadline->tv_sec ||
+        (now.tv_sec == deadline->tv_sec && now.tv_nsec >= deadline->tv_nsec)) {
+        /* Behind schedule. Drop the backlog instead of sprinting to catch
+         * up, so one slow frame cannot turn into a fast-forward. */
+        *deadline = now;
+        return;
+    }
+
+    req.tv_sec  = deadline->tv_sec  - now.tv_sec;
+    req.tv_nsec = deadline->tv_nsec - now.tv_nsec;
+    if (req.tv_nsec < 0) {
+        req.tv_nsec += 1000000000L;
+        req.tv_sec--;
+    }
+    while (nanosleep(&req, &req) == -1 && errno == EINTR)
+        ;
+}
+
+/* Interactive run loop: input, execute, tick the 60Hz timers, repaint. */
+static void run_interactive(Chip8 *c)
+{
+    if (!term_open()) {
+        fprintf(stderr, "chip8: stdin is not a terminal, cannot take input\n"
+                        "     run `./build/chip8` with no arguments for the\n"
+                        "     built-in ROM and a text dump instead\n");
+        return;
+    }
+    atexit(term_close);
+
+    bool quit = false;
+    struct timespec deadline;
+    clock_gettime(CLOCK_MONOTONIC, &deadline);
+
+    while (!quit) {
+        term_poll(c, &quit);
+        chip8_run(c, CYCLES_PER_FRAME);
+        chip8_tick_timers(c);
+        term_draw(c);
+        if (chip8_sound(c)) {
+            fputc('\a', stdout);   /* the one tone CHIP-8 has */
+            fflush(stdout);
+        }
+        add_frame(&deadline);
+        sleep_until(&deadline);
+    }
+}
+
 int main(int argc, char **argv)
 {
     Chip8 c;
@@ -87,15 +161,16 @@ int main(int argc, char **argv)
     if (argc > 1) {
         if (load_file(&c, argv[1]) != 0)
             return 1;
-    } else {
-        bool truncated = false;
-        chip8_load_rom(&c, test_rom, sizeof(test_rom), &truncated);
+        run_interactive(&c);
+        return 0;
     }
 
-    /* 10 cycles is enough for the test ROM (5 opcodes) plus margin. Once a
-     * halt opcode exists, run until halted instead of counting. */
-    chip8_run(&c, 10);
+    bool truncated = false;
+    chip8_load_rom(&c, test_rom, sizeof test_rom, &truncated);
 
+    /* Headless path: the built-in ROM is five opcodes, so a fixed slice is
+     * enough and there is no loop to escape from. */
+    chip8_run(&c, 10);
     print_screen(&c);
     return 0;
 }

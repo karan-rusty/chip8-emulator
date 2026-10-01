@@ -2,9 +2,9 @@ CC     ?= gcc
 CFLAGS ?= -std=c11 -Wall -Wextra -Werror -Wpedantic -Iinclude
 BUILD  ?= build
 
-EMULATOR_SRC := src/chip8.c src/main.c
+EMULATOR_SRC := src/chip8.c src/terminal.c src/main.c
 TEST_SRC     := src/chip8.c src/tests/test_chip8.c
-HEADERS      := include/chip8.h
+HEADERS      := include/chip8.h include/terminal.h
 
 .PHONY: all test run clean
 
