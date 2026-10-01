@@ -10,7 +10,7 @@ A CHIP-8 interpreter in C. Original CHIP-8 instruction set only.
 
     make test
 
-`make test` runs 468 checks across 37 test functions with no external
+`make test` runs 468 checks across 36 test functions with no external
 framework.
 
 ### Against the reference suite
@@ -46,6 +46,24 @@ CHIP-8      1 2 3 C          host      1 2 3 4
 
 Quit with `Ctrl-C` or `Ctrl-D`. Uppercase `A`-`F` also register, so Caps Lock
 does not silently dead-key the right-hand column.
+
+## Layout
+
+```
+include/chip8.h        core state and API
+include/terminal.h     termios frontend API
+include/rom.h          host-side ROM file I/O
+
+src/chip8.c            lifecycle: init, load, keys, timers, run loop
+src/ops.c              the decoder: all 35 opcodes
+src/terminal.c         raw termios + ANSI escapes, keypad map, rendering
+src/rom.c              ROM file loading and the headless text dump
+src/main.c             60Hz frame pacing and the entry point
+
+src/tests/test.h       assertion macros and shared helpers
+src/tests/test_main.c  runner
+src/tests/test_*.c     test groups: core, alu, flow, draw, mem, io
+```
 
 ## Implementation
 

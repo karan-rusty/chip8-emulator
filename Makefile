@@ -2,16 +2,17 @@ CC     ?= gcc
 CFLAGS ?= -std=c11 -Wall -Wextra -Werror -Wpedantic -Iinclude
 BUILD  ?= build
 
-EMULATOR_SRC := src/chip8.c src/terminal.c src/main.c
-TEST_SRC     := src/chip8.c src/tests/test_chip8.c
-HEADERS      := include/chip8.h include/terminal.h
+CORE_SRC  := src/chip8.c src/ops.c
+HOST_SRC  := src/terminal.c src/rom.c src/main.c
+TEST_SRC  := $(CORE_SRC) $(wildcard src/tests/test_*.c)
+HEADERS   := include/chip8.h include/terminal.h include/rom.h src/tests/test.h
 
 .PHONY: all test run clean
 
 all: $(BUILD)/chip8
 
-$(BUILD)/chip8: $(EMULATOR_SRC) $(HEADERS) | $(BUILD)
-	$(CC) $(CFLAGS) $(EMULATOR_SRC) -o $@
+$(BUILD)/chip8: $(CORE_SRC) $(HOST_SRC) $(HEADERS) | $(BUILD)
+	$(CC) $(CFLAGS) $(CORE_SRC) $(HOST_SRC) -o $@
 
 $(BUILD)/test_chip8: $(TEST_SRC) $(HEADERS) | $(BUILD)
 	$(CC) $(CFLAGS) $(TEST_SRC) -o $@
@@ -22,11 +23,9 @@ $(BUILD):
 test: $(BUILD)/test_chip8
 	$(BUILD)/test_chip8
 
-# Run the built-in test ROM and dump the framebuffer as text.
 run: $(BUILD)/chip8
 	$(BUILD)/chip8
 
-# Run a ROM: make rom ROM=path/to/game.ch8
 rom: $(BUILD)/chip8
 	$(BUILD)/chip8 $(ROM)
 
