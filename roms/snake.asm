@@ -135,10 +135,11 @@ SCHK:
   LD I, BODY
   ADD I, V0
   LD V1, [I]
-  SNE V0, VA
-  JP YCMP
+  SNE V1, VA
   JP NEXTSEG
-YCMP:
+  LD V0, 1
+  ADD I, V0
+  LD V1, [I]
   SNE V1, VB
   JP DEAD
   JP NEXTSEG
@@ -303,9 +304,11 @@ IN_DONE:
   RET
 
 SPAWN:
-  RND V0, 62
+  RND V0, 31
+  ADD V0, V0
   LD V5, V0
-  RND V0, 30
+  RND V0, 15
+  ADD V0, V0
   LD V6, V0
 ; reroll while the food sits on the body (else XOR punches a hole, not food)
   LD VD, 0
