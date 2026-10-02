@@ -244,7 +244,7 @@ static void term_present(void *state, const Chip8 *c)
 
     char status[96];
     snprintf(status, sizeof status,
-             " dt %3u  st %3u   pad 1234/qwer/asdf/zxcv   ^C quit\x1b[K",
+             " dt %3u  st %3u   pad 1234/qwer/asdf/zxcv/arrows   ^C quit\x1b[K",
              (unsigned)c->dt, (unsigned)c->st);
     fputs(status, stdout);
     fflush(stdout);
