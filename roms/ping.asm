@@ -301,3 +301,57 @@ LOST_R:
   CALL POINT
   RET
 
+POINT:
+; optional win check first
+  SE V8, 5
+  JP NOWINL
+  ; left reached 5: win screen
+  CLS
+  LD V0, 60
+  LD ST, V0
+  CALL SHOWSCORE
+  CALL BWAIT
+  CALL SHOWSCORE
+  CALL BWAIT
+  CALL SHOWSCORE
+  LD V0, K
+  LD V8, 0
+  LD VC, 0
+  LD I, LSC
+  LD B, V8
+  LD I, RSC
+  LD B, VC
+  LD V2, 13
+  LD V3, 13
+  LD V4, 30
+  LD V5, 14
+  RET
+NOWINL:
+  SE VC, 5
+  JP NOWINR
+  CLS
+  LD V0, 60
+  LD ST, V0
+  CALL SHOWSCORE
+  CALL BWAIT
+  CALL SHOWSCORE
+  CALL BWAIT
+  CALL SHOWSCORE
+  LD V0, K
+  LD V8, 0
+  LD VC, 0
+  LD I, LSC
+  LD B, V8
+  LD I, RSC
+  LD B, VC
+  LD V2, 13
+  LD V3, 13
+  LD V4, 30
+  LD V5, 14
+  RET
+NOWINR:
+  LD V0, 30
+  LD ST, V0
+  CLS
+  LD VB, 10
+  LD VC, 18
