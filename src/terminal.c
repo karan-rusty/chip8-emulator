@@ -154,8 +154,24 @@ static void term_poll(void *state, Chip8 *c, bool *quit)
             /* Swallow ESC sequences (arrows, F-keys) so they never become
              * phantom keypad presses. State survives across reads. */
             if (t->esc == 2) {              /* inside CSI: ESC [ ... */
-                if (ch >= 0x40 && ch <= 0x7E)
+                if (ch >= 0x40 && ch <= 0x7E) {
+                    unsigned char arrow = 0;
+                    switch (ch) {
+                    case 'A': arrow = keypad[5]; break;   /* up    -> w */
+                    case 'B': arrow = keypad[8]; break;   /* down  -> s */
+                    case 'C': arrow = keypad[9]; break;   /* right -> d */
+                    case 'D': arrow = keypad[7]; break;   /* left  -> a */
+                    }
+                    if (arrow) {
+                        for (unsigned k = 0; k < NUM_KEYS; k++) {
+                            if (keypad[k] == arrow) {
+                                chip8_set_key(c, k, true);
+                                t->hold[k] = HOLD_FRAMES;
+                            }
+                        }
+                    }
                     t->esc = 0;
+                }
                 continue;
             }
             if (t->esc == 3) {              /* SS3: ESC O x */
