@@ -188,3 +188,116 @@ AI_DOWN:
 
 ; --- ball motion, walls, paddles, scoring ---
 PHYS:
+  ADD V4, V6
+  SE V6, 254
+  JP XPOS
+  SE VF, 1
+  JP LOST_L
+XPOS:
+  LD V0, V4
+  LD V1, 61
+  SUB V1, V0
+  SE VF, 1
+  JP LOST_R
+  ADD V5, V7
+  SE V7, 254
+  JP VDOWN
+  SE VF, 0
+  JP VDOWN
+  LD V5, 0
+  LD V7, 2
+VDOWN:
+  LD V0, V5
+  LD V1, 30
+  SUB V1, V0
+  SE VF, 0
+  JP PADCHK
+  LD V5, 30
+  LD V7, 254
+PADCHK:
+  ; left paddle collision requires moving left and bx in [0, 5]
+  SE V6, 254
+  JP RPAD
+  LD V0, V4
+  LD V1, 5
+  SUB V1, V0
+  SE VF, 1
+  JP RPAD
+  LD V1, V5
+  LD V0, V2
+  SUB V1, V0
+  SE VF, 1
+  JP LCHK2
+  LD V0, 5
+  SUB V0, V1
+  SE VF, 1
+  JP RPAD
+  JP L_HIT
+LCHK2:
+  LD V0, V2
+  SUB V0, V5
+  LD V1, 1
+  SUB V1, V0
+  SE VF, 1
+  JP RPAD
+  JP L_HIT
+L_HIT:
+  LD V4, 4
+  LD V6, 2
+  LD V0, 5
+  LD ST, V0
+  RET
+RPAD:
+; right paddle: needs V6==2 and bx >= 58
+  SE V6, 2
+  JP P_DONE
+  LD V0, V4
+  LD V1, 58
+  SUB V0, V1
+  SE VF, 1
+  JP P_DONE
+  LD V1, V5
+  LD V0, V3
+  SUB V1, V0
+  SE VF, 1
+  JP RCHK2
+  LD V0, 5
+  SUB V0, V1
+  SE VF, 1
+  JP P_DONE
+  JP R_HIT
+RCHK2:
+  LD V0, V3
+  SUB V0, V5
+  LD V1, 1
+  SUB V1, V0
+  SE VF, 1
+  JP P_DONE
+  JP R_HIT
+R_HIT:
+  LD V4, 58
+  LD V6, 254
+  LD V0, 5
+  LD ST, V0
+  RET
+P_DONE:
+  RET
+VBOK:
+  RET
+LOST_L:
+  LD V0, 1
+  ADD VC, V0
+  LD I, RSC
+  LD B, VC
+  LD V6, 254
+  CALL POINT
+  RET
+LOST_R:
+  LD V0, 1
+  ADD V8, V0
+  LD I, LSC
+  LD B, V8
+  LD V6, 2
+  CALL POINT
+  RET
+
