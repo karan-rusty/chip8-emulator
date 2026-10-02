@@ -397,3 +397,72 @@ RESET:
   LD V5, 14
   RET
 
+BDRAW:
+  LD I, RSQ
+  DRW VC, VB, 2
+  RET
+
+SHOWSCORE:
+  LD I, LSC+2
+  LD V0, [I]
+  LD F, V0
+  LD VC, 24
+  LD VB, 14
+  DRW VC, VB, 5
+  LD I, RSC+2
+  LD V0, [I]
+  LD F, V0
+  LD VC, 34
+  LD VB, 14
+  DRW VC, VB, 5
+  RET
+
+BWAIT:
+  LD V0, 20
+  LD DT, V0
+BWLOOP:
+  LD V0, DT
+  SE V0, 0
+  JP BWLOOP
+  RET
+
+DRAWSCORE:
+  LD I, LSC+2
+  LD V0, [I]
+  LD F, V0
+  LD VC, 22
+  LD VB, 2
+  DRW VC, VB, 5
+  LD I, RSC+2
+  LD V0, [I]
+  LD F, V0
+  LD VC, 42
+  LD VB, 2
+  DRW VC, VB, 5
+  RET
+
+COURT:
+  LD VC, 31
+  LD VB, 0
+CLINE:
+  LD I, CDOT
+  DRW VC, VB, 2
+  LD V0, 4
+  ADD VB, V0
+  SE VB, 32
+  JP CLINE
+  RET
+
+PAD:
+  DB 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0
+BALL:
+  DB 0xC0, 0xC0
+RSQ:
+  DB 0xC0, 0xC0
+CDOT:
+  DB 0x80, 0x80
+LSC:
+  DS 3
+RSC:
+  DS 3
+TMP:
