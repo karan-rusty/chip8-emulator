@@ -127,3 +127,64 @@ H_DONE:
   RET
 
 ; --- AI moves every other rightward poll so it can be beaten ---
+AI:
+  SE V6, 2
+  JP AIRET
+  LD I, TMP+4
+  LD V0, [I]
+  SE V0, 0
+  JP AI_SKIP
+  LD V0, 1
+  LD I, TMP+4
+  LD [I], V0
+  JP AI_MOVE
+AI_SKIP:
+  LD V0, 0
+  LD I, TMP+4
+  LD [I], V0
+AIRET:
+  RET
+AI_MOVE:
+  ; move up iff by+1 < ay+3 AND gap >= 4; i.e. up when (ay+3) - (by+1) >= 4
+  LD V0, V3
+  LD V1, 3
+  ADD V0, V1
+  LD V1, V5
+  ADD V1, 1
+  SUB V0, V1
+  SE VF, 1
+  JP AI_DOWN
+  LD V1, 4
+  SUB V0, V1
+  SE VF, 1
+  JP AIRET
+  LD V0, V3
+  LD V1, 2
+  SUB V0, V1
+  SE VF, 1
+  LD V0, 0
+  LD V3, V0
+  RET
+AI_DOWN:
+  ; move down iff (by+1) - (ay+3) >= 4
+  LD V1, V5
+  ADD V1, 1
+  LD V0, V3
+  ADD V0, 3
+  SUB V1, V0
+  LD V0, 4
+  SUB V1, V0
+  SE VF, 1
+  JP AIRET
+  LD V0, V3
+  LD V1, 2
+  ADD V0, V1
+  LD V1, 26
+  SUB V1, V0
+  SE VF, 1
+  LD V0, 26
+  LD V3, V0
+  RET
+
+; --- ball motion, walls, paddles, scoring ---
+PHYS:
