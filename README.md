@@ -2,6 +2,12 @@
 
 A CHIP-8 emulator in C with three bundled games: Ping Pong, Snake, and Conway's Game of Life.
 
+## Demo
+
+https://github.com/karan-rusty/chip8-emulator/raw/master/media/demo.mp4
+
+Menu, then Game of Life, Snake, and Ping Pong running in a terminal.
+
 ## Build
 
     make
