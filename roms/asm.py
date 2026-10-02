@@ -150,7 +150,9 @@ def emit(op, args, labels):
 
 
 def main():
-    lines = SRC.read_text().splitlines()
+    src = Path(sys.argv[1]) if len(sys.argv) > 1 else SRC
+    out = Path(sys.argv[2]) if len(sys.argv) > 2 else src.with_suffix(".ch8")
+    lines = src.read_text().splitlines()
     labels, items = first_pass(lines)
     rom = bytearray()
     for kind, pay, addr in items:
@@ -165,8 +167,8 @@ def main():
             except AssertionError as e:
                 sys.exit(f"line {ln}: {src}\n  {e}")
             rom += bytes([w >> 8, w & 0xFF])
-    OUT.write_bytes(bytes(rom))
-    print(f"{OUT.name}: {len(rom)} bytes, labels:")
+    out.write_bytes(bytes(rom))
+    print(f"{out.name}: {len(rom)} bytes, labels:")
     for k in ("INIT", "MAIN", "INPUT", "SPAWN", "DRAW", "DEAD",
               "SPR", "BODY", "TMP", "SCORE"):
         if k in labels:
