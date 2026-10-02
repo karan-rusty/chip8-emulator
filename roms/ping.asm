@@ -16,3 +16,31 @@
 ; INPUT consumes (and clears) them into TMP+2/TMP+3 each iteration.
 ; Pad tops are clamped to [0, 26] (paddle height 6).
 
+INIT:
+  CLS
+  LD V0, 0
+  LD V1, 0
+  LD I, LSC
+  LD [I], V1
+  LD I, LSC+2
+  LD [I], V0
+  LD I, RSC
+  LD [I], V1
+  LD I, RSC+2
+  LD [I], V0
+  LD V8, 0
+  LD VC, 0
+  LD I, LSC
+  LD B, V8
+  LD I, RSC
+  LD B, VC
+  LD V2, 13
+  LD V3, 13
+  LD V4, 30
+  LD V5, 14
+  LD V6, 2
+  LD V7, 2
+  LD V0, 0
+  LD I, TMP+4
+  LD [I], V0
+
