@@ -10,7 +10,7 @@ A CHIP-8 interpreter in C. Original CHIP-8 instruction set only.
 
     make test
 
-`make test` runs 468 checks across 36 test functions with no external
+`make test` runs 87 checks across 9 test functions with no external
 framework.
 
 ### Against the reference suite
@@ -31,7 +31,48 @@ platform menu, so it needs `1` pressed to reach the report. See
 ## Run
 
     ./build/chip8                     # built-in test ROM, text dump to stdout
-    make rom ROM=path/to/game.ch8     # play a ROM in the terminal
+    ./build/chip8 game.ch8            # play a ROM in the terminal
+    ./build/chip8 --dump game.ch8     # disassemble it and exit
+    make rom ROM=path/to/game.ch8     # same as `./build/chip8 path`
+
+## Snake (bundled ROM)
+
+`roms/snake.asm` is a playable Snake in original CHIP-8 assembly (731 bytes,
+VIP- and modern-safe). `roms/asm.py` assembles it, `roms/smoke_snake.py` runs
+10 headless logic checks against a Python model of `src/ops.c`, and
+`roms/test_pty.py` drives the real binary through a PTY (pixels, controls,
+death screen).
+
+    make snake                  # rebuild roms/snake.ch8
+    make play-snake             # play: ./build/chip8 roms/snake.ch8 -s 120 -q modern
+    python3 roms/smoke_snake.py # no terminal needed
+    python3 roms/test_pty.py    # end-to-end through a fake terminal
+
+The snake and the food are both 2x2 cells on the same 2px grid, so eating is
+just "head lands on the food". The ROM polls the keypad continuously (not only
+while it is waiting on the timer), so a tapped key registers even at the stock
+`-s 10`.
+
+Steer with `W`/`S`/`A`/`D` (up/down/left/right, case-insensitive, no
+180-degree turns; arrow keys are ignored by the terminal backend). The snake
+starts slow and speeds up as you eat. Eating beeps and grows the snake; wall
+or self hit shows a bordered score panel (blinks twice, longer beep) and any
+key restarts after a short grace. Stock vip quirks also work but draw one
+sprite per frame, so run vip with `-q vip -s 200` for a steady picture.
+
+### Command line
+    chip8 [options] [rom]
+
+      -r, --rom FILE        load FILE as the ROM
+      -L, --load-state FILE start from a saved machine state
+      -S, --save-state FILE write machine state to FILE when the run ends
+      -q, --quirks NAME     vip (default) or modern
+      -s, --speed N         core cycles per frame (default 10)
+      -d, --dump            disassemble the ROM and exit
+      -h, --help            show this help
+
+`CHIP8_FRONTEND` picks the backend and `CHIP8_QUIRKS` sets the default quirk
+profile; the flags override the environment.
 
 ### Terminal controls
 
@@ -44,25 +85,32 @@ CHIP-8      1 2 3 C          host      1 2 3 4
             A 0 B F                    z x c v
 ```
 
-Quit with `Ctrl-C` or `Ctrl-D`. Uppercase `A`-`F` also register, so Caps Lock
-does not silently dead-key the right-hand column.
+Quit with `Ctrl-C` or `Ctrl-D`. Uppercase letters fold to lowercase, so Caps
+Lock does not silently dead-key the pad. Escape sequences (arrows, F-keys)
+are swallowed, not mapped to keys.
 
 ## Layout
 
 ```
 include/chip8.h        core state and API
-include/terminal.h     termios frontend API
+include/disasm.h       disassembler API
+include/frontend.h     backend interface and registry
 include/rom.h          host-side ROM file I/O
+include/state.h        host-side state file I/O
 
-src/chip8.c            lifecycle: init, load, keys, timers, run loop
+src/chip8.c            lifecycle, quirks, and state snapshots
 src/ops.c              the decoder: all 35 opcodes
-src/terminal.c         raw termios + ANSI escapes, keypad map, rendering
+src/disasm.c           the disassembler
+src/frontend.c         the backend registry
+src/terminal.c         the terminal backend: termios, ANSI, keypad map
 src/rom.c              ROM file loading and the headless text dump
-src/main.c             60Hz frame pacing and the entry point
+src/state.c            save/load a machine state to a file
+src/main.c             the generic driver loop and the entry point
 
 src/tests/test.h       assertion macros and shared helpers
 src/tests/test_main.c  runner
-src/tests/test_*.c     test groups: core, alu, flow, draw, mem, io
+src/tests/test_*.c     test groups: core, alu, flow, draw, mem, io, quirks,
+                       disasm, state
 ```
 
 ## Implementation
@@ -70,28 +118,45 @@ src/tests/test_*.c     test groups: core, alu, flow, draw, mem, io
 All 35 standard instructions (Cowgod's reference section 3.1) are implemented.
 Anything else advances `pc` by 2 and changes nothing else.
 
-The frontend is raw `termios` plus ANSI escapes — no SDL, no ncurses, nothing
-beyond libc. The 64x32 framebuffer is drawn as 128x16 characters using the
-half-block glyphs, repainted at 60Hz with an absolute deadline so frame timing
-does not drift. The core never reads stdin or wall time; the frontend pushes
-both in via `chip8_set_key()` and `chip8_tick_timers()`.
+### Frontends and state
+
+State lives in exactly two places, and a new host backend never adds a third:
+
+- **Machine state** is the `Chip8` struct. Only `chip8_*` touches it.
+- **Host state** is one struct per backend, private to that backend's `.c`
+  file. Nothing outside the backend can see it.
+
+A backend fills in one `Frontend` (`include/frontend.h`): a name, its state
+block, and six callbacks — `open`, `close`, `poll`, `present`, `sound`,
+`wait_frame`. `main()` is a generic loop over that interface, so it never
+mentions termios or ANSI. The terminal backend is `src/terminal.c`: raw
+`termios` plus ANSI escapes — no SDL, no ncurses, nothing beyond libc. The
+64x32 framebuffer is drawn as 128x16 characters using the half-block glyphs,
+repainted at 60Hz with an absolute deadline so frame timing does not drift.
+
+The core never reads stdin or wall time; a backend pushes both in through
+`chip8_set_key()` and `chip8_tick_timers()` and pulls the framebuffer out of
+the same `Chip8` it was handed. Adding a second backend means one new file plus
+one line in `src/frontend.c`; `CHIP8_FRONTEND=name` selects it.
 
 ### Quirk profile
 
-Where the platform dialects disagree, this build does what the original
-COSMAC VIP did. All six are reported as expected by the quirks test in the
+Where the platform dialects disagree, the six behaviours live in a `Quirks`
+struct in machine state. The default `vip` preset does what the original
+COSMAC VIP did; `--quirks modern` (`CHIP8_QUIRKS=modern`) selects the Chip-48
+dialect. The default is reported as expected by the quirks test in the
 [Timendus chip8-test-suite](https://github.com/Timendus/chip8-test-suite),
 whose `5-quirks` ROM asks which platform you target and prints a tick per
 quirk:
 
-| Quirk | This build | Means |
-| --- | --- | --- |
-| vF reset | on | `8xy1`/`8xy2`/`8xy3` clear `VF` after the operation |
-| Memory | on | `Fx55`/`Fx65` advance `I` by `x + 1` |
-| Display wait | on | `Dxyn` blocks until the next vertical blank |
-| Clipping | on | a sprite overhanging the right or bottom edge is cut off |
-| Shifting | off | `8xy6`/`8xyE` shift **`Vy`** and park the result in `Vx` |
-| Jumping | off | `Bnnn` adds `V0`, not `Vx` |
+| Quirk (VIP behaviour) | vip | modern | Means |
+| --- | --- | --- | --- |
+| vF reset | on | off | `8xy1`/`8xy2`/`8xy3` clear `VF` after the operation |
+| Memory | on | off | `Fx55`/`Fx65` advance `I` by `x + 1` |
+| Display wait | on | off | `Dxyn` blocks until the next vertical blank |
+| Clipping | on | on | a sprite overhanging the right or bottom edge is cut off |
+| Shifting through Vy | on | off | `8xy6`/`8xyE` shift **`Vy`** and park the result in `Vx` |
+| Jumping on V0 | on | off | `Bnnn` adds `V0`, not `Vx` |
 
 "Display wait" is why drawing is capped at one sprite per frame: `Dxyn`
 raises `c->vblank`, `chip8_run()` stops spending that frame's cycles, and
@@ -126,6 +191,20 @@ the outgoing bit of whichever register was shifted.
 `0x000`-`0x1FF` is interpreter space, holding the 80-byte hex font at
 `0x000`. Programs load at `0x200` and may run to the end of memory, so
 `Fx55`/`Fx65` can legitimately overwrite the font.
+
+### Save states
+
+`chip8_state_save()`/`chip8_state_load()` snapshot the whole machine — memory,
+registers, stack, framebuffer, keys, timers, the RNG and the quirk profile —
+into a 6226-byte, versioned, big-endian record. `--save-state FILE` writes one
+when the run ends and `--load-state FILE` resumes from one. A wrong magic,
+version or length is rejected rather than half-loaded.
+
+### Disassembler
+
+`--dump` disassembles the loaded ROM (`src/disasm.c`). Every implemented
+opcode gets a mnemonic and anything else prints as `DW nnnn`, so a bad opcode
+is visible rather than silently inert.
 
 ### Known limitations
 
