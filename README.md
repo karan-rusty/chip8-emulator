@@ -4,9 +4,8 @@ A CHIP-8 emulator in C with three bundled games: Ping Pong, Snake, and Conway's 
 
 ## Demo
 
-[![CHIP-8 emulator demo](media/demo-poster.png)](media/demo.mp4)
+https://github.com/user-attachments/assets/e9d61d8d-7ffa-4343-8975-765bb523b892
 
-Click to play — the CHIP-8 Arcade menu, then Game of Life, Snake, and Ping Pong running in a terminal.
 
 ## Build
 
