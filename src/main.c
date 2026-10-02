@@ -1,77 +1,67 @@
-#define _POSIX_C_SOURCE 200809L
-
 #include "chip8.h"
+#include "disasm.h"
+#include "frontend.h"
 #include "rom.h"
-#include "terminal.h"
+#include "state.h"
 
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-
-#define TIMER_HZ         60
-#define CYCLES_PER_FRAME 10
+#include <string.h>
 
 static const uint8_t test_rom[] = {
     0x60, 0x10, 0x61, 0x08, 0xA0, 0x00, 0xD0, 0x15, 0x00, 0x00,
 };
 
-static void add_frame(struct timespec *t)
+static const Frontend *pick_frontend(void)
 {
-    t->tv_nsec += 1000000000L / TIMER_HZ;
-    if (t->tv_nsec >= 1000000000L) {
-        t->tv_nsec -= 1000000000L;
-        t->tv_sec++;
-    }
+    const char *name = getenv("CHIP8_FRONTEND");
+    const Frontend *fe = name ? frontend_by_name(name) : NULL;
+    return fe ? fe : frontend_terminal();
 }
 
-static void sleep_until(struct timespec *deadline)
+static void usage(FILE *out)
 {
-    struct timespec now, req;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-
-    if (now.tv_sec > deadline->tv_sec ||
-        (now.tv_sec == deadline->tv_sec && now.tv_nsec >= deadline->tv_nsec)) {
-        *deadline = now;
-        return;
-    }
-
-    req.tv_sec  = deadline->tv_sec  - now.tv_sec;
-    req.tv_nsec = deadline->tv_nsec - now.tv_nsec;
-    if (req.tv_nsec < 0) {
-        req.tv_nsec += 1000000000L;
-        req.tv_sec--;
-    }
-    while (nanosleep(&req, &req) == -1 && errno == EINTR)
-        ;
+    fputs("usage: chip8 [options] [rom]\n"
+          "\n"
+          "  -r, --rom FILE        load FILE as the ROM\n"
+          "  -L, --load-state FILE start from a saved machine state\n"
+          "  -S, --save-state FILE write machine state to FILE when the run ends\n"
+          "  -q, --quirks NAME     vip (default) or modern\n"
+          "  -s, --speed N         core cycles per frame (default 10)\n"
+          "  -d, --dump            disassemble the ROM and exit\n"
+          "  -h, --help            show this help\n"
+          "\n"
+          "With no ROM or state, runs the built-in test ROM and dumps the\n"
+          "framebuffer as text.\n"
+          "\n"
+          "Environment: CHIP8_FRONTEND, CHIP8_QUIRKS\n", out);
 }
 
-static void run_interactive(Chip8 *c)
+static void run(Chip8 *c, const Frontend *fe, int speed)
 {
-    if (!term_open()) {
-        fprintf(stderr, "chip8: stdin is not a terminal, cannot take input\n"
-                        "     run `./build/chip8` with no arguments for the\n"
-                        "     built-in ROM and a text dump instead\n");
+    if (!fe->open(fe->state))
         return;
-    }
-    atexit(term_close);
 
     bool quit = false;
-    struct timespec deadline;
-    clock_gettime(CLOCK_MONOTONIC, &deadline);
-
     while (!quit) {
-        term_poll(c, &quit);
-        chip8_run(c, CYCLES_PER_FRAME);
+        fe->poll(fe->state, c, &quit);
+        chip8_run(c, speed);
         chip8_tick_timers(c);
-        term_draw(c);
-        if (chip8_sound(c)) {
-            fputc('\a', stdout);
-            fflush(stdout);
-        }
-        add_frame(&deadline);
-        sleep_until(&deadline);
+        fe->present(fe->state, c);
+        fe->sound(fe->state, c);
+        fe->wait_frame(fe->state);
     }
+
+    fe->close(fe->state);
+}
+
+static bool needs_value(int i, int argc, const char *opt)
+{
+    if (i >= argc) {
+        fprintf(stderr, "chip8: %s needs a value\n", opt);
+        return false;
+    }
+    return true;
 }
 
 int main(int argc, char **argv)
@@ -79,16 +69,100 @@ int main(int argc, char **argv)
     Chip8 c;
     chip8_init(&c);
 
-    if (argc > 1) {
-        if (rom_load(&c, argv[1]) != 0)
-            return 1;
-        run_interactive(&c);
+    const char *rom = NULL;
+    const char *load_state = NULL;
+    const char *save_state = NULL;
+    int speed = CYCLES_PER_FRAME;
+    bool dump = false;
+
+    const char *qe = getenv("CHIP8_QUIRKS");
+    if (qe) {
+        QuirkPreset p;
+        if (chip8_quirk_parse(qe, &p))
+            chip8_set_quirks(&c, p);
+    }
+
+    for (int i = 1; i < argc; i++) {
+        const char *a = argv[i];
+
+        if (strcmp(a, "-h") == 0 || strcmp(a, "--help") == 0) {
+            usage(stdout);
+            return 0;
+        } else if (strcmp(a, "-d") == 0 || strcmp(a, "--dump") == 0) {
+            dump = true;
+        } else if (strcmp(a, "-r") == 0 || strcmp(a, "--rom") == 0) {
+            if (!needs_value(++i, argc, a))
+                return 2;
+            rom = argv[i];
+        } else if (strcmp(a, "-L") == 0 || strcmp(a, "--load-state") == 0) {
+            if (!needs_value(++i, argc, a))
+                return 2;
+            load_state = argv[i];
+        } else if (strcmp(a, "-S") == 0 || strcmp(a, "--save-state") == 0) {
+            if (!needs_value(++i, argc, a))
+                return 2;
+            save_state = argv[i];
+        } else if (strcmp(a, "-q") == 0 || strcmp(a, "--quirks") == 0) {
+            QuirkPreset p;
+            if (!needs_value(++i, argc, a))
+                return 2;
+            if (!chip8_quirk_parse(argv[i], &p)) {
+                fprintf(stderr, "chip8: unknown quirks '%s' (want vip or modern)\n",
+                        argv[i]);
+                return 2;
+            }
+            chip8_set_quirks(&c, p);
+        } else if (strcmp(a, "-s") == 0 || strcmp(a, "--speed") == 0) {
+            char *end = NULL;
+            long v;
+            if (!needs_value(++i, argc, a))
+                return 2;
+            v = strtol(argv[i], &end, 10);
+            if (!end || *end != '\0' || v < 1 || v > 100000) {
+                fprintf(stderr, "chip8: bad speed '%s'\n", argv[i]);
+                return 2;
+            }
+            speed = (int)v;
+        } else if (a[0] == '-' && a[1] != '\0') {
+            fprintf(stderr, "chip8: unknown option %s\n", a);
+            usage(stderr);
+            return 2;
+        } else if (!rom) {
+            rom = a;
+        } else {
+            fprintf(stderr, "chip8: unexpected argument %s\n", a);
+            return 2;
+        }
+    }
+
+    if (!rom && !load_state) {
+        chip8_load_rom(&c, test_rom, sizeof test_rom, NULL);
+        if (dump) {
+            disasm_rom(&c, PROG_BASE, sizeof test_rom, stdout);
+            return 0;
+        }
+        chip8_run(&c, speed);
+        rom_dump(&c);
         return 0;
     }
 
-    bool truncated = false;
-    chip8_load_rom(&c, test_rom, sizeof test_rom, &truncated);
-    chip8_run(&c, 10);
-    rom_dump(&c);
+    if (load_state) {
+        if (state_load_file(&c, load_state) != 0)
+            return 1;
+    } else {
+        size_t rom_len = 0;
+        if (rom_load(&c, rom, &rom_len) != 0)
+            return 1;
+        if (dump) {
+            disasm_rom(&c, PROG_BASE, rom_len, stdout);
+            return 0;
+        }
+    }
+
+    run(&c, pick_frontend(), speed);
+
+    if (save_state && state_save_file(&c, save_state) != 0)
+        return 1;
+
     return 0;
 }
