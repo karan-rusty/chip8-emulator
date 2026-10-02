@@ -2,3 +2,5 @@ build/
 *.o
 *.ch8
 *.rom
+!roms/*.ch8
+__pycache__/
