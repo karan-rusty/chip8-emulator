@@ -55,41 +55,14 @@ static inline int lit(const Chip8 *c)
     return n;
 }
 
-void test_init(void);
-void test_font(void);
-void test_font_pointer(void);
-void test_load_rom(void);
-void test_fetch(void);
-void test_unknown_opcode_is_inert(void);
-void test_pc_wraps(void);
-void test_load_add(void);
+void test_core(void);
 void test_alu(void);
-void test_alu_flags(void);
-void test_logical_clears_vf(void);
-void test_alu_vf_order(void);
-void test_random(void);
-void test_jump(void);
-void test_call_return(void);
-void test_stack_saturates(void);
-void test_jump_offset(void);
-void test_sys_is_ignored(void);
-void test_skips(void);
-void test_font_draw(void);
+void test_flow(void);
 void test_draw(void);
-void test_draw_row_count_is_a_nibble(void);
-void test_draw_wraps(void);
-void test_draw_clips(void);
-void test_clear(void);
-void test_draw_sets_collision(void);
-void test_schip_draw_forms(void);
-void test_load_i(void);
-void test_add_to_i(void);
-void test_bcd(void);
-void test_mem_move(void);
-void test_unknown_f_opcode_is_inert(void);
-void test_display_wait(void);
-void test_key_skips(void);
-void test_timers(void);
-void test_wait_key(void);
+void test_mem(void);
+void test_io(void);
+void test_quirks(void);
+void test_disasm(void);
+void test_state(void);
 
 #endif
