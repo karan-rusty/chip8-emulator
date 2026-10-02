@@ -79,6 +79,32 @@ or self hit shows a bordered score panel (blinks twice, longer beep) and any
 key restarts after a short grace. Stock vip quirks also work but draw one
 sprite per frame, so run vip with `-q vip -s 200` for a steady picture.
 
+## Game of Life (bundled ROM)
+
+`roms/life.asm` is Conway's Game of Life in original CHIP-8 assembly (992
+bytes). `roms/asm.py` assembles it and `roms/smoke_life.py` runs 39 headless
+checks against a Python model of `src/ops.c` plus a reference Life
+implementation.
+
+    make life                   # rebuild roms/life.ch8
+    make play-life              # play: -s 16000 -q modern
+    python3 roms/smoke_life.py  # no terminal needed
+
+The playfield is a 16x16 grid of cells, each drawn as a solid 4x2 pixel
+block, so the grid exactly fills the 64x32 screen. A cell is one byte in one
+of two 256-byte buffers; every generation computes into the other and the
+two are swapped by anchor registers instead of being copied, so no buffer
+clear is ever needed. The playfield edges are written dead every
+generation, which is also how out-of-range neighbours are handled.
+
+Controls: `W`/Up pauses and resumes, `D`/Right steps one generation while
+paused, `A`/Left reseeds with a random pattern, `S`/Down toggles the pace
+(8 delay ticks between generations, or flat out). One generation is about
+10.4k instructions, so `-s 16000` fits the whole update and redraw in a
+single frame and the screen never shows half a step. Run it with `-q
+modern`: vip's display wait would draw one of the ~196 redraw sprites per
+frame.
+
 ### Command line
     chip8 [options] [rom]
 
