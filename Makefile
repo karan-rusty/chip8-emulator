@@ -8,7 +8,7 @@ TEST_SRC  := $(CORE_SRC) $(wildcard src/tests/test_*.c)
 HEADERS   := include/chip8.h include/disasm.h include/frontend.h \
              include/rom.h include/state.h src/tests/test.h
 
-.PHONY: all test run clean snake play-snake
+.PHONY: all test run clean snake play-snake ping play-ping
 
 all: $(BUILD)/chip8
 
@@ -39,6 +39,17 @@ $(SNAKE_ROM): roms/snake.asm roms/asm.py
 
 play-snake: $(BUILD)/chip8 $(SNAKE_ROM)
 	$(BUILD)/chip8 $(SNAKE_ROM) -s 120 -q modern
+
+
+PING_ROM := roms/ping.ch8
+
+ping: $(PING_ROM)
+
+$(PING_ROM): roms/ping.asm roms/asm.py
+	python3 roms/asm.py roms/ping.asm roms/ping.ch8
+
+play-ping: $(BUILD)/chip8 $(PING_ROM)
+	$(BUILD)/chip8 $(PING_ROM) -s 120 -q modern
 
 clean:
 	rm -rf $(BUILD)
