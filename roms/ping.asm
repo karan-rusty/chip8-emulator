@@ -73,3 +73,57 @@ DLEEP:
   JP MAIN
 
 ; --- left paddle on W/S (or up/down arrows), from the saved flags ---
+INPUT:
+  LD I, TMP+6
+  LD V1, [I]      ; F165 x=1: V0 = TMP+6, V1 = TMP+7
+  LD I, TMP+2
+  LD [I], V1      ; F155 x=1: stash V0,V1 to TMP+2,TMP+3
+  LD V0, 0
+  LD V1, 0
+  LD I, TMP+6
+  LD [I], V1      ; F155: clear both flags
+  LD I, TMP+2
+  LD V1, [I]      ; F165 x=1: V0 = up-flag, V1 = down-flag
+  LD VD, V1       ; preserve down-flag across V1 scratch
+  SE V0, 1
+  JP NO_UP
+  LD V0, V2
+  LD V1, 2
+  SUB V0, V1
+  SE VF, 1
+  LD V0, 0
+  LD V2, V0
+NO_UP:
+  SE VD, 1
+  JP NO_DN
+  LD V0, V2
+  LD V1, 2
+  ADD V0, V1
+  LD V1, 26
+  SUB V1, V0
+  SE VF, 1
+  LD V0, 26
+  LD V2, V0
+NO_DN:
+  RET
+
+; --- record the current W/S key state for this iteration ---
+; key 5 = W/Up; key 8 = S/Down
+KEYSAVE:
+  LD V0, 5
+  SKP V0
+  JP DNCHK
+  LD V0, 1
+  LD I, TMP+6
+  LD [I], V0
+DNCHK:
+  LD V0, 8
+  SKP V0
+  JP H_DONE
+  LD V0, 1
+  LD I, TMP+7
+  LD [I], V0
+H_DONE:
+  RET
+
+; --- AI moves every other rightward poll so it can be beaten ---
