@@ -35,6 +35,25 @@ platform menu, so it needs `1` pressed to reach the report. See
     ./build/chip8 --dump game.ch8     # disassemble it and exit
     make rom ROM=path/to/game.ch8     # same as `./build/chip8 path`
 
+## Ping Pong (bundled ROM)
+
+`roms/ping.asm` is a playable Ping Pong in original CHIP-8 assembly (688
+bytes, VIP- and modern-safe). `roms/asm.py` assembles it, and
+`roms/smoke_ping.py` runs 8 headless checks against a Python model of
+`src/ops.c`.
+
+    make ping                  # rebuild roms/ping.ch8
+    make play-ping             # play: -s 120 -q modern
+    python3 roms/smoke_ping.py # no terminal needed
+
+Controls: `W`/`S` (or Up/Down arrows) move the left paddle; the right
+paddle is a simple AI that tracks the ball. First to 5 shows the score
+panel, clears, and restarts on any key. Note that `LD [I], Vx`/`LD Vx, [I]` stores/loads registers V0..Vx, so
+the score digit at "SCORE+2" uses a stock `REG` pop and the ball loop
+destroys it. Score rendering copies BCD to memory with `Fx33` whenever the
+score changes, so the draw loop reads from RAM rather than the (overwritten)
+right-score register.
+
 ## Snake (bundled ROM)
 
 `roms/snake.asm` is a playable Snake in original CHIP-8 assembly (731 bytes,
