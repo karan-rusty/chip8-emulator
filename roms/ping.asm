@@ -44,3 +44,32 @@ INIT:
   LD I, TMP+4
   LD [I], V0
 
+MAIN:
+  CLS
+  CALL COURT
+  CALL DRAWSCORE
+  LD VC, 2
+  LD VB, V2
+  LD I, PAD
+  DRW VC, VB, 6
+  LD VC, 60
+  LD VB, V3
+  DRW VC, VB, 6
+  LD I, BALL
+  LD VC, V4
+  LD VB, V5
+  DRW VC, VB, 2
+  CALL INPUT
+  CALL AI
+  CALL PHYS
+  LD V0, 4
+  LD DT, V0
+DL_POLL:
+  CALL KEYSAVE
+DLEEP:
+  LD V0, DT
+  SE V0, 0
+  JP DL_POLL
+  JP MAIN
+
+; --- left paddle on W/S (or up/down arrows), from the saved flags ---
