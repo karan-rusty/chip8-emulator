@@ -175,6 +175,10 @@ static void term_poll(void *state, Chip8 *c, bool *quit)
                 continue;
             }
             if (t->esc == 3) {              /* SS3: ESC O x */
+                if (ch == 'A') { chip8_set_key(c, 5, true); t->hold[5] = HOLD_FRAMES; }
+                if (ch == 'B') { chip8_set_key(c, 8, true); t->hold[8] = HOLD_FRAMES; }
+                if (ch == 'C') { chip8_set_key(c, 9, true); t->hold[9] = HOLD_FRAMES; }
+                if (ch == 'D') { chip8_set_key(c, 7, true); t->hold[7] = HOLD_FRAMES; }
                 t->esc = 0;
                 continue;
             }
