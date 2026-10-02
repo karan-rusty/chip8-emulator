@@ -26,3 +26,5 @@ Snake: WASD
 Life: W pause, D step, A reseed, S pace
 
 Ctrl-C to quit.
+
+**Warning:** Play in full screen. The 64x32 framebuffer is drawn as 128x16 characters — a small terminal will clip it.
