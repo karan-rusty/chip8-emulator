@@ -1,6 +1,6 @@
 # chip8
 
-CHIP-8 interpreter in C.
+A CHIP-8 emulator in C with three bundled games: Ping Pong, Snake, and Conway's Game of Life.
 
 ## Build
 
