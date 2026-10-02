@@ -466,3 +466,4 @@ LSC:
 RSC:
   DS 3
 TMP:
+  DS 8
