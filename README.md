@@ -7,6 +7,13 @@ A CHIP-8 emulator in C with three bundled games: Ping Pong, Snake, and Conway's 
 https://github.com/user-attachments/assets/e9d61d8d-7ffa-4343-8975-765bb523b892
 
 
+## Get the release
+
+Download a prebuilt, statically linked Linux (x86_64) binary from the
+[Releases page](https://github.com/karan-rusty/chip8-emulator/releases/latest),
+or build it yourself with `make release`. New to the project? Follow
+[TESTING.md](TESTING.md) for a step-by-step guide to running and testing it.
+
 ## Build
 
     make
