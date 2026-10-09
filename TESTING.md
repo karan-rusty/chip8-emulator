@@ -12,10 +12,12 @@ Download `chip8-<version>-linux-x86_64.tar.gz` from the
 [Releases page](../../releases/latest), then:
 
 ```sh
-tar xzf chip8-*-linux-x86_64.tar.gz
-cd chip8-*            # the folder the tarball extracted into
+tar xzf chip8-*-linux-x86_64.tar.gz   # -> chip8, roms/, README.md, TESTING.md
 chmod +x chip8
 ```
+
+The tarball has no wrapper folder — run the commands from the directory you
+extracted into.
 
 The binary is **statically linked for 64-bit Linux (x86_64)** — no runtime
 dependencies. Verify the download with the `.sha256` file if you like:
