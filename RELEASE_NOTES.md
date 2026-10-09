@@ -1,9 +1,11 @@
 A CHIP-8 emulator written in C that runs in your terminal, with three complete
 games bundled: **Ping Pong**, **Snake**, and **Conway's Game of Life**.
 
-First release. Linux x86_64, nothing to build.
+This is the first release. It runs on 64-bit Linux with no build step and no
+runtime dependencies — grab the tarball below, extract it, and start the menu
+with `./chip8 --menu`.
 
-## Run it
+## Run it (Linux x86_64, nothing to build)
 
 ```sh
 tar xzf chip8-v1.0.0-linux-x86_64.tar.gz   # -> chip8, roms/, README.md, TESTING.md
