@@ -1,5 +1,3 @@
-# chip8 v1.0.0 — terminal CHIP-8 emulator (first release)
-
 A CHIP-8 emulator written in C that runs in your terminal, with three complete
 games bundled: **Ping Pong**, **Snake**, and **Conway's Game of Life**.
 
