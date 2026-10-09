@@ -1,12 +1,9 @@
 A CHIP-8 emulator written in C that runs in your terminal, with three complete
 games bundled: **Ping Pong**, **Snake**, and **Conway's Game of Life**.
 
-This is the first release and it needs testers. Download, run, report — the basic
-pass takes about five minutes and requires no build tools.
+First release. Linux x86_64, nothing to build.
 
-https://github.com/user-attachments/assets/e9d61d8d-7ffa-4343-8975-765bb523b892
-
-## Run it (Linux x86_64, nothing to build)
+## Run it
 
 ```sh
 tar xzf chip8-v1.0.0-linux-x86_64.tar.gz   # -> chip8, roms/, README.md, TESTING.md
@@ -62,29 +59,6 @@ A 0 B F    ->  z x c v
 - `./chip8 --help` lists every option; `./chip8` with no arguments runs a
   built-in test ROM and dumps the framebuffer.
 
-## Test it
-
-Please go through as many of these as you can:
-
-- [ ] `./chip8 --menu` opens the menu; arrows navigate; Enter starts a game.
-- [ ] **Ping Pong** — the paddle moves with W/S and arrows; the ball bounces off
-      walls and paddles; a miss is scored and play continues.
-- [ ] **Snake** — moves, eats, grows; steering works; hitting a wall or itself
-      shows a game-over panel; any key restarts.
-- [ ] **Game of Life** — cells evolve; `W` pauses, `D` steps one generation,
-      `A` reseeds, `S` changes the pace.
-- [ ] **Ctrl-C** quits cleanly (cursor returns, terminal is not garbled).
-- [ ] Sound (terminal bell) plays on the Snake game-over.
-- [ ] Resizing the terminal while playing does not crash it.
-
-The tarball also contains `TESTING.md`, the full step-by-step tester guide.
-
-## Report what you find
-
-[Open an issue](https://github.com/karan-rusty/chip8-emulator/issues/new) with
-your OS and terminal, the exact command you ran, and what you expected versus
-what happened. "Everything worked" is useful too — just note your OS and terminal.
-
 ## Build from source
 
 ```sh
@@ -94,11 +68,3 @@ make play       # build everything and open the game menu
 make play-ping  # also: play-snake, play-life
 make release    # reproduce this tarball (needs a static libc)
 ```
-
-## Known limits
-
-- The prebuilt binary is **Linux x86_64 only**; other platforms must build from source.
-- The full 128-column framebuffer needs a wide terminal; narrower windows clip it.
-- Sound is the **terminal bell**, so it follows your terminal's bell setting and can be muted.
-- The standalone `chip8` asset is the same binary without the `roms/` folder —
-  `--menu` needs the ROMs next to it, so use the tarball.
